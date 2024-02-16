@@ -6,6 +6,8 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"embed"
+	_ "embed"
 	"encoding/xml"
 	"flag"
 	"fmt"
@@ -41,9 +43,6 @@ var (
 	httpAddr   string
 	httpHost   string
 	httpPrefix string
-
-	// Insecure http cookies (only recommended for internal LANs/VPNs)
-	httpInsecure bool
 
 	// backlink
 	backlink string
@@ -83,6 +82,10 @@ var (
 
 	// Totp
 	tempTotpKey *otp.Key
+
+	// Embed struct with all assets
+	//go:embed web
+	Assets embed.FS
 )
 
 func init() {
@@ -90,7 +93,6 @@ func init() {
 	cli.StringVar(&backlink, "backlink", "/", "backlink (optional)")
 	cli.StringVar(&httpHost, "http-host", "", "HTTP host")
 	cli.StringVar(&httpAddr, "http-addr", ":80", "HTTP listen address")
-	cli.BoolVar(&httpInsecure, "http-insecure", false, "enable sessions cookies for http (no https) not recommended")
 	cli.BoolVar(&letsencrypt, "letsencrypt", true, "enable TLS using Let's Encrypt on port 443")
 	cli.BoolVar(&showVersion, "version", false, "display version and exit")
 	cli.BoolVar(&showHelp, "help", false, "display help and exit")
@@ -202,7 +204,7 @@ func main() {
 	r.POST("/profile/delete", Log(WebHandler(profileDeleteHandler, "profile/delete")))
 	r.GET("/profile/config/wireguard/:profile", Log(WebHandler(wireguardConfigHandler, "profile/config/wireguard")))
 	r.GET("/profile/qrconfig/wireguard/:profile", Log(WebHandler(wireguardQRConfigHandler, "profile/qrconfig/wireguard")))
-	r.GET("/static/*path", staticHandler)
+	r.ServeFiles("/static/*path", http.FS(Assets))
 
 	//
 	// Server
@@ -380,19 +382,12 @@ func configureSAML() error {
 		Path:   "/",
 	}
 
-	if httpInsecure {
-		rootURL.Scheme = "http"
-	}
-
 	newsp, err := samlsp.New(samlsp.Options{
 		URL:               rootURL,
 		Key:               keyPair.PrivateKey.(*rsa.PrivateKey),
 		Certificate:       keyPair.Leaf,
 		IDPMetadata:       entity,
 		CookieName:        SessionCookieNameSSO,
-		CookieDomain:      httpHost, // TODO: this will break if using a custom domain.
-		CookieSecure:      !httpInsecure,
-		Logger:            logger,
 		AllowIDPInitiated: true,
 	})
 	if err != nil {

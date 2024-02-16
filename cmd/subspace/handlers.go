@@ -497,20 +497,20 @@ PersistentKeepalive = {{$.PersistentKeepalive}}
 WGCLIENT
 `
 	_, err = bash(script, struct {
-		Profile      		Profile
-		EndpointHost 		string
-		Datadir      		string
-		IPv4Gw       		string
-		IPv6Gw       		string
-		IPv4Pref     		string
-		IPv6Pref     		string
-		IPv4Cidr     		string
-		IPv6Cidr     		string
-		Listenport   		string
-		AllowedIPS   		string
-		Ipv4Enabled  		bool
-		Ipv6Enabled  		bool
-		DisableDNS   		bool
+		Profile             Profile
+		EndpointHost        string
+		Datadir             string
+		IPv4Gw              string
+		IPv6Gw              string
+		IPv4Pref            string
+		IPv6Pref            string
+		IPv4Cidr            string
+		IPv6Cidr            string
+		Listenport          string
+		AllowedIPS          string
+		Ipv4Enabled         bool
+		Ipv6Enabled         bool
+		DisableDNS          bool
 		PersistentKeepalive string
 	}{
 		profile,
@@ -686,9 +686,7 @@ func helpHandler(w *Web) {
 	w.HTML()
 }
 
-//
 // Helpers
-//
 func deleteProfile(profile Profile) error {
 	script := `
 # WireGuard

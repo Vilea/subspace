@@ -84,29 +84,14 @@ func (m *Mailer) sendmail(tmpl, to, subject string, data interface{}) error {
 	return nil
 }
 
-func (m *Mailer) Render(target string, data interface{}) (string, error) {
-	t := template.New(target).Funcs(template.FuncMap{
+func (m *Mailer) Render(template_filename string, data interface{}) (string, error) {
+	tpl_path := fmt.Sprintf("email/%s", template_filename)
+	t, err := template.New(template_filename).Funcs(template.FuncMap{
 		"time": humanize.Time,
-	})
-	for _, filename := range AssetNames() {
-		if !strings.HasPrefix(filename, "email/") {
-			continue
-		}
-		name := strings.TrimPrefix(filename, "email/")
-		b, err := Asset(filename)
-		if err != nil {
-			return "", err
-		}
-
-		var tmpl *template.Template
-		if name == t.Name() {
-			tmpl = t
-		} else {
-			tmpl = t.New(name)
-		}
-		if _, err := tmpl.Parse(string(b)); err != nil {
-			return "", err
-		}
+	}).ParseFS(Assets, tpl_path)
+	if err != nil {
+		logger.Errorf("failed parsing template: %s", tpl_path)
+		return "", err
 	}
 	var b bytes.Buffer
 	if err := t.Execute(&b, data); err != nil {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/gob"
 	"fmt"
 	"html/template"
@@ -110,27 +109,17 @@ func (w *Web) HTML() {
 		},
 	})
 
-	for _, filename := range AssetNames() {
-		if !strings.HasPrefix(filename, "templates/") {
-			continue
-		}
-		name := strings.TrimPrefix(filename, "templates/")
-		b, err := Asset(filename)
-		if err != nil {
-			Error(w.w, err)
-			return
-		}
-
-		var tmpl *template.Template
-		if name == t.Name() {
-			tmpl = t
-		} else {
-			tmpl = t.New(name)
-		}
-		if _, err := tmpl.Parse(string(b)); err != nil {
-			Error(w.w, err)
-			return
-		}
+	template_filename := w.template
+	template_contents, err := Assets.ReadFile(fmt.Sprintf("templates/%s", template_filename))
+	if err != nil {
+		logger.Errorf("unable to read template: templates/%s", template_filename)
+		Error(w.w, err)
+		return
+	}
+	if _, err := t.Parse(string(template_contents)); err != nil {
+		logger.Errorf("unable to parse template: templates/%s", template_filename)
+		Error(w.w, err)
+		return
 	}
 
 	w.w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -261,26 +250,6 @@ func Log(h httprouter.Handle) httprouter.Handle {
 	}
 }
 
-func staticHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	serveAsset(w, r, ps.ByName("path"))
-}
-
-func serveAsset(w http.ResponseWriter, r *http.Request, filename string) {
-	path := "static" + filename
-
-	b, err := Asset(path)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-	fi, err := AssetInfo(path)
-	if err != nil {
-		Error(w, err)
-		return
-	}
-	http.ServeContent(w, r, path, fi.ModTime(), bytes.NewReader(b))
-}
-
 func ValidateSession(r *http.Request) (*Session, error) {
 	cookie, err := r.Cookie(SessionCookieName)
 	if err != nil {
@@ -307,7 +276,6 @@ func (w *Web) SignoutSession() {
 			Path:     "/",
 			HttpOnly: true,
 			Domain:   httpHost,
-			Secure:   !httpInsecure,
 			MaxAge:   -1,
 			Expires:  time.Unix(1, 0),
 		})
@@ -318,7 +286,6 @@ func (w *Web) SignoutSession() {
 		Path:     "/",
 		HttpOnly: true,
 		Domain:   httpHost,
-		Secure:   !httpInsecure,
 		MaxAge:   -1,
 		Expires:  time.Unix(1, 0),
 	})
@@ -342,7 +309,6 @@ func (w *Web) SigninSession(admin bool, userID string) error {
 		Path:     "/",
 		HttpOnly: true,
 		Domain:   httpHost,
-		Secure:   !httpInsecure,
 		Expires:  expires,
 	})
 	return nil
