@@ -1,4 +1,4 @@
-FROM golang:1.14 as build
+FROM golang:1.22 as build
 
 RUN apt-get update \
     && apt-get install -y git make \
@@ -10,7 +10,6 @@ COPY Makefile ./
 # go.mod and go.sum if exists
 COPY go.* ./
 COPY cmd/ ./cmd
-COPY web ./web
 
 ARG BUILD_VERSION=unknown
 ARG GOARCH=amd64
@@ -19,7 +18,7 @@ ENV GODEBUG="netdns=go http2server=0"
 
 RUN make build BUILD_VERSION=${BUILD_VERSION}
 
-FROM alpine:3.11.6
+FROM alpine:3.19
 LABEL maintainer="github.com/subspacecommunity/subspace"
 
 ENV DEBIAN_FRONTEND noninteractive

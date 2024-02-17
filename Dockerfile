@@ -1,4 +1,4 @@
-FROM golang:1.16-alpine as build
+FROM golang:1.22-alpine as build
 
 RUN apk add --no-cache \
     git \
@@ -10,7 +10,6 @@ COPY Makefile ./
 # go.mod and go.sum if exists
 COPY go.* ./
 COPY cmd/ ./cmd
-COPY web ./web
 
 ARG BUILD_VERSION=unknown
 
@@ -18,7 +17,7 @@ ENV GODEBUG="netdns=go http2server=0"
 
 RUN make build BUILD_VERSION=${BUILD_VERSION}
 
-FROM alpine:3.13.4
+FROM alpine:3.19
 LABEL maintainer="github.com/subspacecommunity/subspace"
 
 COPY --from=build  /src/subspace /usr/bin/subspace
