@@ -29,6 +29,7 @@ function error_exit() {
 # common
 export SUBSPACE_BACKLINK="${SUBSPACE_BACKLINK:-/}"
 export SUBSPACE_DISABLE_DNS="${SUBSPACE_DISABLE_DNS:-false}"
+export SUBSPACE_DISABLE_MASQUERADE="${SUBSPACE_DISABLE_MASQUERADE:-false}"
 export SUBSPACE_HTTP_ADDR="${SUBSPACE_HTTP_ADDR:-:80}"
 export SUBSPACE_HTTP_INSECURE="${SUBSPACE_HTTP_INSECURE:-false}"
 export SUBSPACE_LETSENCRYPT="${SUBSPACE_LETSENCRYPT:-true}"
@@ -55,118 +56,104 @@ echo "" >/etc/resolv.conf
 # Set DNS servers
 echo "${SUBSPACE_NAMESERVERS}" | tr "," "\n" | sed -e 's:^:nameserver :' >>/etc/resolv.conf
 
-if [ -z "${SUBSPACE_DISABLE_MASQUERADE-}" ]; then
-  if [[ ${SUBSPACE_IPV4_NAT_ENABLED} -ne 0 ]]; then
-    # IPv4
-    if ! /sbin/iptables -t nat --check POSTROUTING -s "${SUBSPACE_IPV4_POOL}" -j MASQUERADE; then
+# Masquerading ip{6}tables setup
+if [ "${SUBSPACE_DISABLE_MASQUERADE}" == "false" ]; then
+  # IPv4
+  if [ "${SUBSPACE_IPV4_NAT_ENABLED}" == "true" ]; then
+    ! /sbin/iptables -t nat --check POSTROUTING -s "${SUBSPACE_IPV4_POOL}" -j MASQUERADE &&
       /sbin/iptables -t nat --append POSTROUTING -s "${SUBSPACE_IPV4_POOL}" -j MASQUERADE
-    fi
-
-    if ! /sbin/iptables --check FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT; then
+    ! /sbin/iptables --check FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT &&
       /sbin/iptables --append FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
-    fi
-
-    if ! /sbin/iptables --check FORWARD -s "${SUBSPACE_IPV4_POOL}" -j ACCEPT; then
+    ! /sbin/iptables --check FORWARD -s "${SUBSPACE_IPV4_POOL}" -j ACCEPT &&
       /sbin/iptables --append FORWARD -s "${SUBSPACE_IPV4_POOL}" -j ACCEPT
-    fi
   fi
 
-  if [[ ${SUBSPACE_IPV6_NAT_ENABLED} -ne 0 ]]; then
-    # IPv6
-    if ! /sbin/ip6tables -t nat --check POSTROUTING -s "${SUBSPACE_IPV6_POOL}" -j MASQUERADE; then
+  # IPv6
+  if [ "${SUBSPACE_IPV6_NAT_ENABLED}" == "true" ]; then
+    ! /sbin/ip6tables -t nat --check POSTROUTING -s "${SUBSPACE_IPV6_POOL}" -j MASQUERADE &&
       /sbin/ip6tables -t nat --append POSTROUTING -s "${SUBSPACE_IPV6_POOL}" -j MASQUERADE
-    fi
-
-    if ! /sbin/ip6tables --check FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT; then
+    ! /sbin/ip6tables --check FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT &&
       /sbin/ip6tables --append FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
-    fi
-
-    if ! /sbin/ip6tables --check FORWARD -s "${SUBSPACE_IPV6_POOL}" -j ACCEPT; then
+    ! /sbin/ip6tables --check FORWARD -s "${SUBSPACE_IPV6_POOL}" -j ACCEPT &&
       /sbin/ip6tables --append FORWARD -s "${SUBSPACE_IPV6_POOL}" -j ACCEPT
-    fi
   fi
 fi
 
-if [[ ${SUBSPACE_IPV4_NAT_ENABLED} -ne 0 ]]; then
-  # ipv4 - DNS Leak Protection
-  if ! /sbin/iptables -t nat --check OUTPUT -s "${SUBSPACE_IPV4_POOL}" -p udp --dport 53 -j DNAT --to "${SUBSPACE_IPV4_GW}":53; then
-    /sbin/iptables -t nat --append OUTPUT -s "${SUBSPACE_IPV4_POOL}" -p udp --dport 53 -j DNAT --to "${SUBSPACE_IPV4_GW}":53
+# DNS leak protection when enabled
+if [ "${SUBSPACE_DISABLE_DNS}" == "false" ]; then
+  # IPv4
+  if [ "${SUBSPACE_IPV4_NAT_ENABLED}" == "true" ]; then
+    ! /sbin/iptables -t nat --check OUTPUT -s "${SUBSPACE_IPV4_POOL}" -p udp --dport 53 -j DNAT --to "${SUBSPACE_IPV4_GW}":53 &&
+      /sbin/iptables -t nat --append OUTPUT -s "${SUBSPACE_IPV4_POOL}" -p udp --dport 53 -j DNAT --to "${SUBSPACE_IPV4_GW}":53
+    ! /sbin/iptables -t nat --check OUTPUT -s "${SUBSPACE_IPV4_POOL}" -p tcp --dport 53 -j DNAT --to "${SUBSPACE_IPV4_GW}":53 &&
+      /sbin/iptables -t nat --append OUTPUT -s "${SUBSPACE_IPV4_POOL}" -p tcp --dport 53 -j DNAT --to "${SUBSPACE_IPV4_GW}":53
   fi
-
-  if ! /sbin/iptables -t nat --check OUTPUT -s "${SUBSPACE_IPV4_POOL}" -p tcp --dport 53 -j DNAT --to "${SUBSPACE_IPV4_GW}":53; then
-    /sbin/iptables -t nat --append OUTPUT -s "${SUBSPACE_IPV4_POOL}" -p tcp --dport 53 -j DNAT --to "${SUBSPACE_IPV4_GW}":53
-  fi
-fi
-
-if [[ ${SUBSPACE_IPV6_NAT_ENABLED} -ne 0 ]]; then
-  # ipv6 - DNS Leak Protection
-  if ! /sbin/ip6tables --wait -t nat --check OUTPUT -s "${SUBSPACE_IPV6_POOL}" -p udp --dport 53 -j DNAT --to "${SUBSPACE_IPV6_GW}"; then
-    /sbin/ip6tables --wait -t nat --append OUTPUT -s "${SUBSPACE_IPV6_POOL}" -p udp --dport 53 -j DNAT --to "${SUBSPACE_IPV6_GW}"
-  fi
-
-  if ! /sbin/ip6tables --wait -t nat --check OUTPUT -s "${SUBSPACE_IPV6_POOL}" -p tcp --dport 53 -j DNAT --to "${SUBSPACE_IPV6_GW}"; then
-    /sbin/ip6tables --wait -t nat --append OUTPUT -s "${SUBSPACE_IPV6_POOL}" -p tcp --dport 53 -j DNAT --to "${SUBSPACE_IPV6_GW}"
+  # IPv6
+  if [ "${SUBSPACE_IPV6_NAT_ENABLED}" == "true" ]; then
+    ! /sbin/ip6tables --wait -t nat --check OUTPUT -s "${SUBSPACE_IPV6_POOL}" -p udp --dport 53 -j DNAT --to "${SUBSPACE_IPV6_GW}" &&
+      /sbin/ip6tables --wait -t nat --append OUTPUT -s "${SUBSPACE_IPV6_POOL}" -p udp --dport 53 -j DNAT --to "${SUBSPACE_IPV6_GW}"
+    ! /sbin/ip6tables --wait -t nat --check OUTPUT -s "${SUBSPACE_IPV6_POOL}" -p tcp --dport 53 -j DNAT --to "${SUBSPACE_IPV6_GW}" &&
+      /sbin/ip6tables --wait -t nat --append OUTPUT -s "${SUBSPACE_IPV6_POOL}" -p tcp --dport 53 -j DNAT --to "${SUBSPACE_IPV6_GW}"
   fi
 fi
+
 #
 # WireGuard ("${SUBSPACE_IPV4_POOL}")
 #
 umask_val=$(umask)
 umask 0077
-if ! test -d /data/wireguard; then
-  mkdir /data/wireguard
-  cd /data/wireguard
+export WG_DIR="/data/wireguard"
+if [ ! -d /data/wireguard ]; then
+  mkdir -p "${WG_DIR}/clients" "${WG_DIR}/peers"
 
-  mkdir clients
-  touch clients/null.conf # So you can cat *.conf safely
-  mkdir peers
-  touch peers/null.conf # So you can cat *.conf safely
+  # So you can cat *.conf safely
+  touch "${WG_DIR}/clients/null.conf" "${WG_DIR}/peers/null.conf"
 
-  # Generate public/private server keys.
-  wg genkey | tee server.private | wg pubkey >server.public
+  # Generate public/private server keys
+  wg genkey | tee "${WG_DIR}/server.private" | wg pubkey >"${WG_DIR}/server.public"
 fi
 
-cat <<WGSERVER >/data/wireguard/server.conf
+cat <<WGSERVER >"${WG_DIR}"/server.conf
 [Interface]
-PrivateKey = $(cat /data/wireguard/server.private)
+PrivateKey = $(cat "${WG_DIR}"/server.private)
 ListenPort = ${SUBSPACE_LISTENPORT}
 
 WGSERVER
-cat /data/wireguard/peers/*.conf >>/data/wireguard/server.conf
+cat "${WG_DIR}"/peers/*.conf >>"${WG_DIR}"/server.conf
 umask "${umask_val}"
-[ -f /data/config.json ] && chmod 600 /data/config.json # Special handling of file not created by start-up script
+# Special handling of file not created by start-up script
+[ -f /data/config.json ] &&
+  chmod 600 /data/config.json
 
-if ip link show wg0 2>/dev/null; then
+# Reinitialize interface if already present
+ip link show wg0 2>/dev/null &&
   ip link del wg0
-fi
 ip link add wg0 type wireguard
-if [[ ${SUBSPACE_IPV4_NAT_ENABLED} -ne 0 ]]; then
-  # shellcheck disable=SC2155
-  export SUBSPACE_IPV4_CIDR="$(echo "${SUBSPACE_IPV4_POOL-}" | cut -d '/' -f2)"
-  ip addr add "${SUBSPACE_IPV4_GW}"/"${SUBSPACE_IPV4_CIDR}" dev wg0
-fi
-if [[ ${SUBSPACE_IPV6_NAT_ENABLED} -ne 0 ]]; then
-  # shellcheck disable=SC2155
-  export SUBSPACE_IPV6_CIDR="$(echo "${SUBSPACE_IPV6_POOL-}" | cut -d '/' -f2)"
-  ip addr add "${SUBSPACE_IPV6_GW}"/"${SUBSPACE_IPV6_CIDR}" dev wg0
-fi
-wg setconf wg0 /data/wireguard/server.conf
+
+# Setup routing on the wireguard interface
+[ "${SUBSPACE_IPV4_NAT_ENABLED}" == "true" ] &&
+  ip addr add "${SUBSPACE_IPV4_GW}"/"$(echo "${SUBSPACE_IPV4_POOL-}" | cut -d '/' -f2)" dev wg0
+[ "${SUBSPACE_IPV6_NAT_ENABLED}" == "true" ] &&
+  ip addr add "${SUBSPACE_IPV6_GW}"/"$(echo "${SUBSPACE_IPV6_POOL-}" | cut -d '/' -f2)" dev wg0
+wg setconf wg0 "${WG_DIR}"/server.conf
 ip link set wg0 up
 
-# dnsmasq service
-if [[ ${SUBSPACE_DISABLE_DNS} == "0" ]]; then
+# dnsmasq service if DNS is enabled
+if [ "${SUBSPACE_DISABLE_DNS}" == "false" ]; then
   DNSMASQ_LISTEN_ADDRESS="127.0.0.1"
-  if [[ ${SUBSPACE_IPV4_NAT_ENABLED} -ne 0 ]]; then
+  [ "${SUBSPACE_IPV4_NAT_ENABLED}" == "true" ] &&
     DNSMASQ_LISTEN_ADDRESS="${DNSMASQ_LISTEN_ADDRESS},${SUBSPACE_IPV4_GW}"
-  fi
-  if [[ ${SUBSPACE_IPV6_NAT_ENABLED} -ne 0 ]]; then
+  [ "${SUBSPACE_IPV6_NAT_ENABLED}" == "true" ] &&
     DNSMASQ_LISTEN_ADDRESS="${DNSMASQ_LISTEN_ADDRESS},${SUBSPACE_IPV6_GW}"
-  fi
 
-  if ! test -d /etc/service/dnsmasq; then
+  if [ ! -d /etc/service/dnsmasq ]; then
+    # create the path and all its components
+    mkdir -p /etc/service/dnsmasq/log/main
+    # dnsmasq configuration file
     cat <<DNSMASQ >/etc/dnsmasq.conf
     # Only listen on necessary addresses.
     listen-address=${DNSMASQ_LISTEN_ADDRESS}
+    interface=wg0
 
     # Never forward plain names (without a dot or domain part)
     domain-needed
@@ -178,26 +165,29 @@ if [[ ${SUBSPACE_DISABLE_DNS} == "0" ]]; then
     conf-dir=/etc/dnsmasq.d
 DNSMASQ
 
-    mkdir -p /etc/service/dnsmasq
+    # dnsmasq runit definition
     cat <<RUNIT >/etc/service/dnsmasq/run
 #!/bin/sh
 exec /usr/sbin/dnsmasq --keep-in-foreground
 RUNIT
-    chmod +x /etc/service/dnsmasq/run
 
     # dnsmasq service log
-    mkdir -p /etc/service/dnsmasq/log/main
     cat <<RUNIT >/etc/service/dnsmasq/log/run
 #!/bin/sh
 exec svlogd -tt ./main
 RUNIT
-    chmod +x /etc/service/dnsmasq/log/run
+
+    # make runits executable
+    chmod +x /etc/service/dnsmasq/run /etc/service/dnsmasq/log/run
   fi
 fi
 
 # subspace service
-if ! test -d /etc/service/subspace; then
-  mkdir /etc/service/subspace
+if [ ! -d /etc/service/subspace ]; then
+  # create the path and all its components
+  mkdir -p /etc/service/subspace/log/main
+
+  # subspace runit definition
   cat <<RUNIT >/etc/service/subspace/run
 #!/bin/sh
 source /etc/envvars
@@ -209,16 +199,15 @@ exec /usr/bin/subspace \
     "--letsencrypt=${SUBSPACE_LETSENCRYPT}" \
     "--theme=${SUBSPACE_THEME}"
 RUNIT
-  chmod +x /etc/service/subspace/run
 
   # subspace service log
-  mkdir /etc/service/subspace/log
-  mkdir /etc/service/subspace/log/main
   cat <<RUNIT >/etc/service/subspace/log/run
 #!/bin/sh
 exec svlogd -tt ./main
 RUNIT
-  chmod +x /etc/service/subspace/log/run
+
+  # make runits executable
+  chmod +x /etc/service/subspace/run /etc/service/subspace/log/run
 fi
 
 exec "$@"
