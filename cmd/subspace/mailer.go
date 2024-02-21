@@ -83,7 +83,7 @@ func (m *Mailer) Render(template_filename string, data interface{}) (string, err
 	tpl_path := fmt.Sprintf("email/%s", template_filename)
 	t, err := template.New(template_filename).Funcs(template.FuncMap{
 		"time": humanize.Time,
-	}).ParseFS(Assets, tpl_path)
+	}).ParseFS(Assets, tpl_path, "templates/header.html", "templates/footer.html")
 	if err != nil {
 		logger.Errorf("failed parsing template: %s", tpl_path)
 		return "", err

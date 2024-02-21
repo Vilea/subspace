@@ -74,7 +74,7 @@ func Error(w http.ResponseWriter, err error) {
 }
 
 func (w *Web) HTML() {
-	t := template.New(w.template).Funcs(template.FuncMap{
+	t, _ := template.New(w.template).Funcs(template.FuncMap{
 		"hasprefix": strings.HasPrefix,
 		"hassuffix": strings.HasSuffix,
 		"add": func(a, b int) int {
@@ -107,7 +107,7 @@ func (w *Web) HTML() {
 			}
 			return strings.Title(strings.TrimSuffix(domain, suffix))
 		},
-	})
+	}).ParseFS(Assets, "templates/header.html", "templates/footer.html")
 
 	template_filename := w.template
 	template_contents, err := Assets.ReadFile(fmt.Sprintf("templates/%s", template_filename))

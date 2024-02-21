@@ -10,6 +10,7 @@ import (
 	"encoding/xml"
 	"flag"
 	"fmt"
+	"io/fs"
 	"net"
 	"net/http"
 	"net/url"
@@ -83,7 +84,7 @@ var (
 	tempTotpKey *otp.Key
 
 	// Embed struct with all assets
-	//go:embed web
+	//go:embed email static templates
 	Assets embed.FS
 )
 
@@ -203,7 +204,8 @@ func main() {
 	r.POST("/profile/delete", Log(WebHandler(profileDeleteHandler, "profile/delete")))
 	r.GET("/profile/config/wireguard/:profile", Log(WebHandler(wireguardConfigHandler, "profile/config/wireguard")))
 	r.GET("/profile/qrconfig/wireguard/:profile", Log(WebHandler(wireguardQRConfigHandler, "profile/qrconfig/wireguard")))
-	r.ServeFiles("/static/*filepath", http.FS(Assets))
+	subFs, _ := fs.Sub(Assets, "static")
+	r.ServeFiles("/static/*filepath", http.FS(subFs))
 
 	//
 	// Server
