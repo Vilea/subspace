@@ -37,13 +37,13 @@ COPY --from=builder qemu-arm-static /usr/bin
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apk add --no-cache \
+    dnsmasq \
+    ip6tables \
     iproute2 \
     iptables \
-    ip6tables \
-    dnsmasq \
+    runit \
     socat  \
-    wireguard-tools \
-    runit
+    wireguard-tools
 
 COPY --from=build  /src/subspace /usr/bin/subspace
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
