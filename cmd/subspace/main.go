@@ -203,7 +203,7 @@ func main() {
 	r.POST("/profile/delete", Log(WebHandler(profileDeleteHandler, "profile/delete")))
 	r.GET("/profile/config/wireguard/:profile", Log(WebHandler(wireguardConfigHandler, "profile/config/wireguard")))
 	r.GET("/profile/qrconfig/wireguard/:profile", Log(WebHandler(wireguardQRConfigHandler, "profile/qrconfig/wireguard")))
-	r.ServeFiles("/static/*path", http.FS(Assets))
+	r.ServeFiles("/static/", http.FS(Assets))
 
 	//
 	// Server
