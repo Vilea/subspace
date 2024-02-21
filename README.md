@@ -125,7 +125,6 @@ $ subspace --http-host subspace.example.com
 | `SUBSPACE_NAMESERVERS`          | `1.1.1.1,1.0.0.1`   | Nameservers to use, by-default those of Cloudflare.                                                                                                  |
 | `SUBSPACE_LETSENCRYPT`          | `true`              | Whether or not to use a LetsEncrypt certificate                                                                                                      |
 | `SUBSPACE_HTTP_ADDR`            | `:80`               | HTTP listen address                                                                                                                                  |
-| `SUBSPACE_HTTP_INSECURE`        | `false`             | Enable session cookies for http and remove redirect to https                                                                                         |
 | `SUBSPACE_LISTENPORT`           | `51820`             | Port for WireGuard to listen on                                                                                                                      |
 | `SUBSPACE_ENDPOINT_HOST`        | `httpHost`          | The host to listen on for the webserver, if it differs from the VPN GW.                                                                              |
 | `SUBSPACE_ALLOWED_IPS`          | `0.0.0.0/0, ::/0`   | Comma-separated list of IP's / subnets that are routed via WireGuard. By default everything is routed.                                               |
@@ -240,7 +239,6 @@ services:
    environment:
     - SUBSPACE_HTTP_HOST=subspace.example.org
     - SUBSPACE_LETSENCRYPT=true
-    - SUBSPACE_HTTP_INSECURE=false
     - SUBSPACE_HTTP_ADDR=":80"
     - SUBSPACE_NAMESERVERS=1.1.1.1,8.8.8.8
     - SUBSPACE_LISTENPORT=51820
