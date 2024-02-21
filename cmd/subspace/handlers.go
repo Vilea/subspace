@@ -460,6 +460,10 @@ func profileAddHandler(w *Web) {
 	if shouldDisableDNS := getEnv("SUBSPACE_DISABLE_DNS", "false"); shouldDisableDNS == "true" {
 		disableDNS = true
 	}
+	tunnelDNSServers := false
+	if shouldTunnelDNS := getEnv("SUBSPACE_TUNNEL_DNS_SERVERS", "false"); shouldTunnelDNS == "true" {
+		tunnelDNSServers = true
+	}
 	persistentKeepalive := "false"
 	if keepalive := getEnv("SUBSPACE_PERSISTENT_KEEPALIVE", "nil"); keepalive != "nil" {
 		persistentKeepalive = keepalive
@@ -481,6 +485,9 @@ func profileAddHandler(w *Web) {
 		}
 	}
 	dnsNames = strings.Trim(dnsNames, ",")
+	if tunnelDNSServers {
+		allowedips = strings.Trim(fmt.Sprintf("%s,%s", allowedips, dnsNames), ",")
+	}
 
 	script := `
 cd {{$.Datadir}}/wireguard
