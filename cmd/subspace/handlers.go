@@ -464,6 +464,22 @@ func profileAddHandler(w *Web) {
 	if keepalive := getEnv("SUBSPACE_PERSISTENT_KEEPALIVE", "nil"); keepalive != "nil" {
 		persistentKeepalive = keepalive
 	}
+	// If DNS server is disabled, use given NameServers, which can be LAN ones
+	// If DNS server is enabled, use IPv4 and/or IPv6 gateways
+	// If all of these expand to empty list, simply do not setup DNS servers for the client
+	dnsNames := ""
+	if disableDNS {
+		if dNames := getEnv("SUBSPACE_NAMESERVERS", ""); dNames != "nil" {
+			dnsNames = dNames
+		}
+	} else {
+		if ipv4Enabled {
+			dnsNames = fmt.Sprintf("%s,%s", dnsNames, ipv4Gw)
+		}
+		if ipv6Enabled {
+			dnsNames = fmt.Sprintf("%s,%s", dnsNames, ipv6Gw)
+		}
+	}
 
 	script := `
 cd {{$.Datadir}}/wireguard
@@ -481,8 +497,8 @@ WGPEER
 cat <<WGCLIENT >clients/{{$.Profile.ID}}.conf
 [Interface]
 PrivateKey = ${wg_private_key}
-{{- if not .DisableDNS }}
-DNS = {{if .Ipv4Enabled}}{{$.IPv4Gw}}{{end}}{{if .Ipv6Enabled}}{{if .Ipv4Enabled}},{{end}}{{$.IPv6Gw}}{{end}}
+{{- if .DnsNames }}
+DNS = {{ .DnsNames }}
 {{- end }}
 Address = {{if .Ipv4Enabled}}{{$.IPv4Pref}}{{$.Profile.Number}}/{{$.IPv4Cidr}}{{end}}{{if .Ipv6Enabled}}{{if .Ipv4Enabled}},{{end}}{{$.IPv6Pref}}{{$.Profile.Number}}/{{$.IPv6Cidr}}{{end}}
 
@@ -510,6 +526,7 @@ WGCLIENT
 		Ipv6Enabled         bool
 		DisableDNS          bool
 		PersistentKeepalive string
+		DnsNames            string
 	}{
 		profile,
 		endpointHost,
@@ -526,6 +543,7 @@ WGCLIENT
 		ipv6Enabled,
 		disableDNS,
 		persistentKeepalive,
+		dnsNames,
 	})
 	if err != nil {
 		logger.Warn(err)
