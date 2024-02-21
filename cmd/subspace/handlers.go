@@ -480,6 +480,7 @@ func profileAddHandler(w *Web) {
 			dnsNames = fmt.Sprintf("%s,%s", dnsNames, ipv6Gw)
 		}
 	}
+	dnsNames = strings.Trim(dnsNames, ",")
 
 	script := `
 cd {{$.Datadir}}/wireguard
