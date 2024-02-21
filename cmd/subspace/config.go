@@ -9,7 +9,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -83,7 +82,7 @@ type Info struct {
 }
 
 type Config struct {
-	mu       sync.RWMutex
+	mutex    sync.RWMutex
 	filename string
 
 	Info *Info `json:"info"`
@@ -97,7 +96,7 @@ type Config struct {
 func NewConfig(filename string) (*Config, error) {
 	filename = filepath.Join(datadir, filename)
 	c := &Config{filename: filename}
-	b, err := ioutil.ReadFile(filename)
+	b, err := os.ReadFile(filename)
 
 	// Create new config with defaults
 	if os.IsNotExist(err) {
@@ -121,19 +120,19 @@ func NewConfig(filename string) (*Config, error) {
 }
 
 func (c *Config) Lock() {
-	c.mu.Lock()
+	c.mutex.Lock()
 }
 
 func (c *Config) Unlock() {
-	c.mu.Unlock()
+	c.mutex.Unlock()
 }
 
 func (c *Config) RLock() {
-	c.mu.RLock()
+	c.mutex.RLock()
 }
 
 func (c *Config) RUnlock() {
-	c.mu.RUnlock()
+	c.mutex.RUnlock()
 }
 
 func (c *Config) generateSAMLKeyPair() error {

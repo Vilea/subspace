@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"image/png"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"regexp"
@@ -47,7 +46,6 @@ func ssoHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 	logger.Debugf("SSO: unable to get session")
 	samlSP.OnError(w, r, err)
-	return
 }
 
 // Handles the SAML part separately from sign in
@@ -72,7 +70,7 @@ func wireguardQRConfigHandler(w *Web) {
 		return
 	}
 
-	b, err := ioutil.ReadFile(profile.WireGuardConfigPath())
+	b, err := os.ReadFile(profile.WireGuardConfigPath())
 	if err != nil {
 		Error(w.w, err)
 		return
@@ -103,7 +101,7 @@ func wireguardConfigHandler(w *Web) {
 		return
 	}
 
-	b, err := ioutil.ReadFile(profile.WireGuardConfigPath())
+	b, err := os.ReadFile(profile.WireGuardConfigPath())
 	if err != nil {
 		Error(w.w, err)
 		return
@@ -451,18 +449,18 @@ func profileAddHandler(w *Web) {
 		allowedips = ips
 	}
 	ipv4Enabled := true
-	if enable := getEnv("SUBSPACE_IPV4_NAT_ENABLED", "1"); enable == "0" {
+	if enable := getEnv("SUBSPACE_IPV4_NAT_ENABLED", "true"); enable == "false" {
 		ipv4Enabled = false
 	}
 	ipv6Enabled := true
-	if enable := getEnv("SUBSPACE_IPV6_NAT_ENABLED", "1"); enable == "0" {
+	if enable := getEnv("SUBSPACE_IPV6_NAT_ENABLED", "true"); enable == "false" {
 		ipv6Enabled = false
 	}
 	disableDNS := false
-	if shouldDisableDNS := getEnv("SUBSPACE_DISABLE_DNS", "0"); shouldDisableDNS == "1" {
+	if shouldDisableDNS := getEnv("SUBSPACE_DISABLE_DNS", "false"); shouldDisableDNS == "true" {
 		disableDNS = true
 	}
-	persistentKeepalive := "0"
+	persistentKeepalive := "false"
 	if keepalive := getEnv("SUBSPACE_PERSISTENT_KEEPALIVE", "nil"); keepalive != "nil" {
 		persistentKeepalive = keepalive
 	}

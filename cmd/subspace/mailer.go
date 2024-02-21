@@ -7,15 +7,10 @@ import (
 	"net"
 	"strings"
 	"text/template"
-	"time"
 
 	humanize "github.com/dustin/go-humanize"
 	gomail "gopkg.in/gomail.v2"
 )
-
-func init() {
-	rand.Seed(time.Now().Unix())
-}
 
 type Mailer struct{}
 

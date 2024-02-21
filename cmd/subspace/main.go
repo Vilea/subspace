@@ -7,7 +7,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"embed"
-	_ "embed"
 	"encoding/xml"
 	"flag"
 	"fmt"

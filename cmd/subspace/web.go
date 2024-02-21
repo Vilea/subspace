@@ -193,7 +193,7 @@ func WebHandler(h func(*Web), section string) httprouter.Handle {
 				jwtSessionClaims, ok := session.(samlsp.JWTSessionClaims)
 
 				if !ok {
-					Error(w, fmt.Errorf("Unable to decode session into JWTSessionClaims"))
+					Error(w, fmt.Errorf("unable to decode session into JWTSessionClaims"))
 					return
 				}
 
